@@ -11,24 +11,23 @@ import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-# Set page config
+
 st.set_page_config(
     page_title="Financial Stability Clustering",
     page_icon="💰",
     layout="wide"
 )
 
-# Add title and description
+
 st.title("💰 Financial Stability Clustering Analysis")
 st.markdown("""
 This application analyzes financial patterns using DBSCAN clustering to identify different financial stability profiles.
 Upload your CSV file containing financial data to begin the analysis.
 """)
 
-# File uploader
+
 uploaded_file = st.file_uploader("Upload your financial data CSV", type=["csv"])
 
-# Sidebar for parameters
 st.sidebar.header("Clustering Parameters")
 eps = st.sidebar.slider("DBSCAN Epsilon (Neighborhood Size)", 0.1, 2.0, 0.5, 0.1)
 min_samples = st.sidebar.slider("DBSCAN Min Samples", 3, 15, 5, 1)
@@ -36,7 +35,7 @@ use_pca = st.sidebar.checkbox("Use PCA for Dimensionality Reduction", True)
 pca_components = st.sidebar.slider("PCA Components", 2, 4, 2, 1) if use_pca else None
 
 def run_clustering_analysis(df):
-    # Feature Engineering
+    
     with st.expander("Feature Engineering Details", expanded=False):
         st.markdown("""
         The following features are calculated:
@@ -52,14 +51,13 @@ def run_clustering_analysis(df):
                            df["Entertainment"] + df["Utilities"] + df["Healthcare"] + df["Education"] + df["Miscellaneous"]) / df["Income"]
     df["Liquid_Term"] = df["Desired_Savings"] / (df["Income"] - df["Desired_Savings"])
     
-    # Prepare Features for Clustering
+ 
     features_for_clustering = df[["Savings_Rate", "Debt_Rate", "Expense_to_Income", "Liquid_Term"]].fillna(0)
-    
-    # Display feature statistics
+   
     st.subheader("Feature Statistics")
     st.dataframe(features_for_clustering.describe())
     
-    # Scaling
+
     scaler = RobustScaler()
     features_scaled = scaler.fit_transform(features_for_clustering)
     
