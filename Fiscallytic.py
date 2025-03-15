@@ -3,22 +3,19 @@ import pandas as pd
 import numpy as np
 from sklearn.cluster import DBSCAN
 from sklearn.preprocessing import RobustScaler
-import matplotlib.pyplot as plt
-import seaborn as sns
-from sklearn.decomposition import PCA
 
 # Set page config
 st.set_page_config(
-    page_title="Fiscallytic",
+    page_title="Fiscallytic ML",
     page_icon="💰",
     layout="wide"
 )
 
 # Add title and description
-st.title("💰 Fiscallytic: Financial Stability Analysis")
+st.title("💰 Fiscallytic: ML-Based Financial Stability Analysis")
 st.markdown("""
-This app uses machine learning (DBSCAN clustering) to analyze your financial stability based on your income, expenses, savings, and debt information.
-Enter your financial details below to receive your personalized stability assessment.
+This app uses machine learning (DBSCAN clustering) to analyze your financial stability based on your income, 
+expenses, savings, and debt information.
 """)
 
 # Create a sidebar for model parameters
@@ -34,9 +31,12 @@ with st.sidebar:
     st.markdown("""
     ### About DBSCAN
     
-    DBSCAN (Density-Based Spatial Clustering of Applications with Noise) is a clustering algorithm that groups together points that are closely packed together, marking as outliers points that lie alone in low-density regions.
+    DBSCAN (Density-Based Spatial Clustering of Applications with Noise) is a clustering algorithm 
+    that groups together points that are closely packed together, marking as outliers points 
+    that lie alone in low-density regions.
     
-    - **Epsilon**: The maximum distance between two samples for one to be considered as in the neighborhood of the other
+    - **Epsilon**: The maximum distance between two samples for one to be considered as in the 
+      neighborhood of the other
     - **Min Samples**: The number of samples in a neighborhood for a point to be considered as a core point
     """)
 
@@ -68,7 +68,7 @@ def generate_synthetic_data(user_data_row):
     # Create a range of financial profiles for clustering
     np.random.seed(42)  # For reproducibility
     
-    # Generate 100 synthetic data points around different financial profiles
+    # Generate synthetic data points around different financial profiles
     n_samples = 300
     
     # Low stability profiles
@@ -153,51 +153,7 @@ if submit_button:
         else:
             st.metric("Liquid Term", f"{liquid_term:.2f}")
     
-    # Method 1: Rule-based classification for comparison
-    savings_rate = user_data['Savings_Rate'].values[0]
-    debt_rate = user_data['Debt_Rate'].values[0]
-    expense_ratio = user_data['Expense_to_Income'].values[0]
-    
-    # Calculate rule-based score
-    rule_score = 0
-    
-    # Savings Rate scoring
-    if savings_rate >= 0.20:
-        rule_score += 3  # High savings rate
-    elif savings_rate >= 0.10:
-        rule_score += 2  # Moderate savings rate
-    elif savings_rate > 0:
-        rule_score += 1  # Low savings rate
-    
-    # Debt Rate scoring (lower is better)
-    if debt_rate <= 0.15:
-        rule_score += 3  # Low debt rate
-    elif debt_rate <= 0.30:
-        rule_score += 2  # Moderate debt rate
-    elif debt_rate <= 0.40:
-        rule_score += 1  # High debt rate
-    
-    # Expense to Income scoring (lower is better)
-    if expense_ratio <= 0.50:
-        rule_score += 3  # Low expense ratio
-    elif expense_ratio <= 0.70:
-        rule_score += 2  # Moderate expense ratio
-    elif expense_ratio <= 0.85:
-        rule_score += 1  # High expense ratio
-    
-    # Determine rule-based stability category
-    if rule_score >= 7:
-        rule_stability = "High Stability"
-        rule_color = "#28a745"  # Green
-    elif rule_score >= 4:
-        rule_stability = "Moderate Stability"
-        rule_color = "#ffc107"  # Yellow
-    else:
-        rule_stability = "Low Stability"
-        rule_color = "#dc3545"  # Red
-    
-    # Method 2: DBSCAN Clustering for ML-based classification
-    # Generate synthetic data
+    # DBSCAN Clustering for ML-based classification
     st.subheader("Machine Learning Classification")
     with st.expander("DBSCAN Clustering Process", expanded=True):
         st.markdown("""
@@ -228,49 +184,6 @@ if submit_button:
         # Determine user's cluster
         user_cluster = clusters[-1]
         
-        # Visualize the clusters with PCA
-        pca = PCA(n_components=2)
-        reduced_data = pca.fit_transform(scaled_data)
-        
-        # Create a DataFrame for visualization
-        viz_df = pd.DataFrame({
-            'PCA1': reduced_data[:, 0],
-            'PCA2': reduced_data[:, 1],
-            'Cluster': clusters
-        })
-        
-        # Highlight user data point
-        viz_df['IsUser'] = [i == len(viz_df) - 1 for i in range(len(viz_df))]
-        
-        # Plot clusters
-        fig, ax = plt.subplots(figsize=(10, 6))
-        
-        # Plot each cluster
-        for cluster in sorted(viz_df['Cluster'].unique()):
-            if cluster == -1:
-                # Noise points
-                cluster_points = viz_df[viz_df['Cluster'] == cluster]
-                plt.scatter(cluster_points['PCA1'], cluster_points['PCA2'], 
-                           label=f'Noise', color='gray', alpha=0.5, s=30)
-            else:
-                # Cluster points
-                cluster_points = viz_df[(viz_df['Cluster'] == cluster) & (~viz_df['IsUser'])]
-                plt.scatter(cluster_points['PCA1'], cluster_points['PCA2'], 
-                           label=f'Cluster {cluster}', alpha=0.7, s=30)
-        
-        # Highlight user data point
-        user_point = viz_df[viz_df['IsUser']]
-        plt.scatter(user_point['PCA1'], user_point['PCA2'], 
-                   color='red', marker='*', s=300, label='Your Profile')
-        
-        plt.title('Financial Profile Clustering (PCA Visualization)')
-        plt.xlabel('Principal Component 1')
-        plt.ylabel('Principal Component 2')
-        plt.legend()
-        
-        # Display the plot
-        st.pyplot(fig)
-        
         # Calculate cluster means
         cluster_means = combined_data.groupby('Cluster').mean()
         
@@ -278,87 +191,93 @@ if submit_button:
         st.subheader("Cluster Characteristics")
         st.write(cluster_means)
         
-        # Determine the stability level of each cluster
-        # Higher savings rate, lower debt rate, and lower expense ratio = better stability
-        if user_cluster == -1:
-            # Noise point
-            ml_stability = rule_stability  # Fall back to rule-based
-            ml_color = rule_color
-            ml_description = "Your financial profile is unique and doesn't fit standard patterns. Using rule-based assessment instead."
-        else:
-            # Get characteristics of user's cluster
-            cluster_sr = cluster_means.loc[user_cluster, 'Savings_Rate']
-            cluster_dr = cluster_means.loc[user_cluster, 'Debt_Rate']
-            cluster_er = cluster_means.loc[user_cluster, 'Expense_to_Income']
-            
-            # Score the cluster
-            cluster_score = 0
+        # Define function to classify clusters
+        def classify_cluster(sr, dr, ei):
+            """Classify a cluster based on its mean values"""
+            # Calculate a score based on financial metrics
+            score = 0
             
             # Savings Rate scoring
-            if cluster_sr >= 0.20:
-                cluster_score += 3  # High savings rate
-            elif cluster_sr >= 0.10:
-                cluster_score += 2  # Moderate savings rate
-            elif cluster_sr > 0:
-                cluster_score += 1  # Low savings rate
+            if sr >= 0.20:
+                score += 3  # High savings rate
+            elif sr >= 0.10:
+                score += 2  # Moderate savings rate
+            elif sr > 0:
+                score += 1  # Low savings rate
             
             # Debt Rate scoring (lower is better)
-            if cluster_dr <= 0.15:
-                cluster_score += 3  # Low debt rate
-            elif cluster_dr <= 0.30:
-                cluster_score += 2  # Moderate debt rate
-            elif cluster_dr <= 0.40:
-                cluster_score += 1  # High debt rate
+            if dr <= 0.15:
+                score += 3  # Low debt rate
+            elif dr <= 0.30:
+                score += 2  # Moderate debt rate
+            elif dr <= 0.40:
+                score += 1  # High debt rate
             
             # Expense to Income scoring (lower is better)
-            if cluster_er <= 0.50:
-                cluster_score += 3  # Low expense ratio
-            elif cluster_er <= 0.70:
-                cluster_score += 2  # Moderate expense ratio
-            elif cluster_er <= 0.85:
-                cluster_score += 1  # High expense ratio
+            if ei <= 0.50:
+                score += 3  # Low expense ratio
+            elif ei <= 0.70:
+                score += 2  # Moderate expense ratio
+            elif ei <= 0.85:
+                score += 1  # High expense ratio
             
-            # Determine ML-based stability category
-            if cluster_score >= 7:
-                ml_stability = "High Stability"
-                ml_color = "#28a745"  # Green
-                ml_description = "The DBSCAN algorithm has identified your financial profile as part of a cluster with excellent financial stability characteristics."
-            elif cluster_score >= 4:
-                ml_stability = "Moderate Stability"
-                ml_color = "#ffc107"  # Yellow
-                ml_description = "The DBSCAN algorithm has identified your financial profile as part of a cluster with moderate financial stability characteristics."
+            # Classify based on score
+            if score >= 7:
+                return "High Stability", "#28a745"  # Green
+            elif score >= 4:
+                return "Moderate Stability", "#ffc107"  # Yellow
             else:
-                ml_stability = "Low Stability"
-                ml_color = "#dc3545"  # Red
-                ml_description = "The DBSCAN algorithm has identified your financial profile as part of a cluster with concerning financial stability characteristics."
+                return "Low Stability", "#dc3545"  # Red
+        
+        # Create cluster classifications for all clusters
+        cluster_classifications = {}
+        for cluster in cluster_means.index:
+            if cluster != -1:  # Skip noise cluster
+                sr = cluster_means.loc[cluster, 'Savings_Rate']
+                dr = cluster_means.loc[cluster, 'Debt_Rate']
+                ei = cluster_means.loc[cluster, 'Expense_to_Income']
+                stability, color = classify_cluster(sr, dr, ei)
+                cluster_classifications[cluster] = (stability, color)
+        
+        # Display cluster classifications
+        st.subheader("Cluster Stability Classifications")
+        for cluster, (stability, _) in cluster_classifications.items():
+            st.write(f"Cluster {cluster}: {stability}")
+        
+        # Determine user's financial stability
+        if user_cluster == -1:
+            # User is an outlier - analyze individually
+            savings_rate = user_data['Savings_Rate'].values[0]
+            debt_rate = user_data['Debt_Rate'].values[0]
+            expense_ratio = user_data['Expense_to_Income'].values[0]
+            stability, color = classify_cluster(savings_rate, debt_rate, expense_ratio)
+            st.warning("Your profile was classified as an outlier. Individual assessment applied.")
+        else:
+            # User belongs to a cluster
+            stability, color = cluster_classifications.get(user_cluster, ("Unknown", "#6c757d"))
+        
+        # Description map
+        stability_descriptions = {
+            "High Stability": "Your financial profile shows excellent financial management with strong savings, low debt, and controlled expenses.",
+            "Moderate Stability": "Your financial profile shows reasonable financial management with some areas for improvement.",
+            "Low Stability": "Your financial profile indicates concerns in multiple areas that need attention.",
+            "Unknown": "Unable to determine stability level."
+        }
+        
+        # Get description
+        description = stability_descriptions.get(stability, "")
     
-    # Compare rule-based and ML-based classifications
-    st.subheader("Classification Results")
+    # Display the results
+    st.subheader("Financial Stability Assessment")
+    st.markdown(f"""
+    <div style="background-color: {color}; padding: 20px; border-radius: 10px; text-align: center; margin: 20px 0;">
+        <h2 style="color: white; margin: 0;">{stability}</h2>
+    </div>
+    """, unsafe_allow_html=True)
     
-    comparison_col1, comparison_col2 = st.columns(2)
-    
-    with comparison_col1:
-        st.markdown("### Rule-Based Classification")
-        st.markdown(f"""
-        <div style="background-color: {rule_color}; padding: 20px; border-radius: 10px; text-align: center; margin: 20px 0;">
-            <h2 style="color: white; margin: 0;">{rule_stability}</h2>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with comparison_col2:
-        st.markdown("### Machine Learning Classification")
-        st.markdown(f"""
-        <div style="background-color: {ml_color}; padding: 20px; border-radius: 10px; text-align: center; margin: 20px 0;">
-            <h2 style="color: white; margin: 0;">{ml_stability}</h2>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    # Display assessment details for ML-based classification
-    st.subheader("ML Assessment Details")
-    st.write(ml_description)
-    
-    if user_cluster == -1:
-        st.warning("Your financial profile was classified as an outlier by DBSCAN. This suggests that your financial situation is unique and doesn't fit into the common patterns. This is not necessarily bad - it just means your profile is different from the typical cases in our data.")
+    # Display assessment details
+    st.subheader("Assessment Details")
+    st.write(description)
     
     # Detailed breakdown
     st.subheader("Breakdown of Your Financial Health")
@@ -367,6 +286,7 @@ if submit_button:
     
     with breakdown_col1:
         st.markdown("### Savings")
+        savings_rate = user_data['Savings_Rate'].values[0]
         if savings_rate >= 0.20:
             st.markdown("✅ **Excellent**: Your savings rate is above 20%")
         elif savings_rate >= 0.10:
@@ -378,6 +298,7 @@ if submit_button:
     
     with breakdown_col2:
         st.markdown("### Debt")
+        debt_rate = user_data['Debt_Rate'].values[0]
         if debt_rate <= 0.15:
             st.markdown("✅ **Excellent**: Your debt burden is low")
         elif debt_rate <= 0.30:
@@ -389,6 +310,7 @@ if submit_button:
     
     with breakdown_col3:
         st.markdown("### Expenses")
+        expense_ratio = user_data['Expense_to_Income'].values[0]
         if expense_ratio <= 0.50:
             st.markdown("✅ **Excellent**: Your expenses are well controlled")
         elif expense_ratio <= 0.70:
@@ -398,13 +320,9 @@ if submit_button:
         else:
             st.markdown("❌ **Critical**: Your expenses are too high")
     
-    # Use the ML stability for recommendations
-    stability = ml_stability
-    
-    # Recommendations
+    # Recommendations based on stability category
     st.subheader("Recommendations")
     
-    # Different recommendations based on stability category
     if stability == "High Stability":
         st.markdown("""
         ### 🌟 Congratulations on your excellent financial management! 🌟
@@ -415,38 +333,61 @@ if submit_button:
         - 🎯 **Set new financial goals** to stay motivated and continue your success
         - 🛡️ **Review your insurance coverage** to ensure your financial security is protected
         """)
+    elif stability == "Moderate Stability":
+        st.markdown("""
+        ### 🔍 You have a solid foundation, but there's room for improvement
+        
+        - 📊 **Track your spending** more closely to identify potential savings
+        - 💰 **Increase your savings rate** by 3-5% for greater long-term security
+        - 💳 **Review your debt strategy** to potentially accelerate payoff of high-interest debt
+        - 📝 **Create a monthly budget** to better manage your cash flow
+        - 🛒 **Look for small optimizations** in your recurring expenses
+        """)
     else:
-        if savings_rate < 0.10:
-            st.markdown("- 💡 **Increase savings**: Try to save at least 10% of your income")
+        st.markdown("""
+        ### 🚨 Your financial situation needs immediate attention
         
-        if debt_rate > 0.30:
-            st.markdown("- 💡 **Reduce debt**: Focus on paying down high-interest debt")
+        - 📉 **Create an emergency budget** to reduce expenses immediately
+        - 🛑 **Pause non-essential spending** until your situation stabilizes
+        - 💸 **Look for additional income sources** to improve your cash flow
+        - 🔄 **Consolidate high-interest debt** if possible to reduce monthly payments
+        - 📞 **Consider financial counseling** for personalized guidance
+        """)
         
-        if expense_ratio > 0.70:
-            st.markdown("- 💡 **Review expenses**: Look for areas where you can reduce spending")
-            
-            # Identify highest expense categories
-            expenses = {
-                "Rent/Mortgage": rent,
-                "Groceries": groceries,
-                "Transport": transport,
-                "Eating Out": eating_out,
-                "Entertainment": entertainment,
-                "Utilities": utilities,
-                "Healthcare": healthcare,
-                "Education": education,
-                "Miscellaneous": miscellaneous
-            }
-            
-            top_expenses = sorted(expenses.items(), key=lambda x: x[1], reverse=True)[:3]
-            st.markdown("- 💡 **Highest expense categories**:")
-            for category, amount in top_expenses:
-                if amount > 0:  # Only show categories with expenses
-                    if income > 0:
-                        percentage = amount / income * 100
-                        st.markdown(f"  - {category}: ₹{amount:.2f} ({percentage:.1f}% of income)")
-                    else:
-                        st.markdown(f"  - {category}: ₹{amount:.2f}")
+    # Specific targeted recommendations based on metrics
+    st.markdown("### Targeted Recommendations")
+    
+    if savings_rate < 0.10:
+        st.markdown("- 💡 **Increase savings**: Try to save at least 10% of your income")
+    
+    if debt_rate > 0.30:
+        st.markdown("- 💡 **Reduce debt**: Focus on paying down high-interest debt")
+    
+    if expense_ratio > 0.70:
+        st.markdown("- 💡 **Review expenses**: Look for areas where you can reduce spending")
+        
+        # Identify highest expense categories
+        expenses = {
+            "Rent/Mortgage": rent,
+            "Groceries": groceries,
+            "Transport": transport,
+            "Eating Out": eating_out,
+            "Entertainment": entertainment,
+            "Utilities": utilities,
+            "Healthcare": healthcare,
+            "Education": education,
+            "Miscellaneous": miscellaneous
+        }
+        
+        top_expenses = sorted(expenses.items(), key=lambda x: x[1], reverse=True)[:3]
+        st.markdown("- 💡 **Highest expense categories**:")
+        for category, amount in top_expenses:
+            if amount > 0:  # Only show categories with expenses
+                if income > 0:
+                    percentage = amount / income * 100
+                    st.markdown(f"  - {category}: ₹{amount:.2f} ({percentage:.1f}% of income)")
+                else:
+                    st.markdown(f"  - {category}: ₹{amount:.2f}")
 
 # Information section at the bottom
 st.markdown("""
@@ -460,7 +401,8 @@ This app uses the DBSCAN clustering algorithm to classify financial stability ba
 3. **Expense to Income Ratio** = Total Monthly Expenses ÷ Monthly Income
 4. **Liquid Term** = Monthly Savings ÷ (Monthly Income - Monthly Savings)
 
-The DBSCAN algorithm identifies clusters of similar financial profiles and determines which cluster your financial profile belongs to, providing a data-driven assessment of your financial stability.
+The DBSCAN algorithm identifies clusters of similar financial profiles and determines which cluster your 
+financial profile belongs to, providing a data-driven assessment of your financial stability.
 
 For a more personalized financial strategy, consider consulting with a financial advisor.
 """)
