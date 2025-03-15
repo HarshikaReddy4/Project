@@ -12,10 +12,10 @@ st.set_page_config(
 )
 
 # Add title and description
-st.title("💰 Financial Stability Classifier")
+st.title("💰 Dynamic Financial Classification Using Machine Learning")
 st.markdown("""
-This app classifies your financial stability based on your income, expenses, savings, and debt information.
-Enter your financial details below to receive your stability assessment.
+This app uses machine learning to classify your financial stability based on your income, expenses, savings, and debt information.
+Enter your financial details below to receive your personalized stability assessment.
 """)
 
 # Define the form for user input
@@ -194,45 +194,59 @@ if submit_button:
     # Recommendations
     st.subheader("Recommendations")
     
-    if savings_rate < 0.10:
-        st.markdown("- 💡 **Increase savings**: Try to save at least 10% of your income")
-    
-    if debt_rate > 0.30:
-        st.markdown("- 💡 **Reduce debt**: Focus on paying down high-interest debt")
-    
-    if expense_ratio > 0.70:
-        st.markdown("- 💡 **Review expenses**: Look for areas where you can reduce spending")
+    # Different recommendations based on stability category
+    if stability == "High Stability":
+        st.markdown("""
+        ### 🌟 Congratulations on your excellent financial management! 🌟
         
-        # Identify highest expense categories
-        expenses = {
-            "Rent/Mortgage": rent,
-            "Groceries": groceries,
-            "Transport": transport,
-            "Eating Out": eating_out,
-            "Entertainment": entertainment,
-            "Utilities": utilities,
-            "Healthcare": healthcare,
-            "Education": education,
-            "Miscellaneous": miscellaneous
-        }
+        - 🚀 **Keep up the great work!** You're on the path to long-term financial freedom
+        - 💎 **Consider investing** for even greater long-term growth
+        - 🏆 **Share your knowledge** with others who might benefit from your financial discipline
+        - 🎯 **Set new financial goals** to stay motivated and continue your success
+        - 🛡️ **Review your insurance coverage** to ensure your financial security is protected
+        """)
+    else:
+        if savings_rate < 0.10:
+            st.markdown("- 💡 **Increase savings**: Try to save at least 10% of your income")
         
-        top_expenses = sorted(expenses.items(), key=lambda x: x[1], reverse=True)[:3]
-        st.markdown("- 💡 **Highest expense categories**:")
-        for category, amount in top_expenses:
-            percentage = amount / income * 100
-            st.markdown(f"  - {category}: ${amount:.2f} ({percentage:.1f}% of income)")
+        if debt_rate > 0.30:
+            st.markdown("- 💡 **Reduce debt**: Focus on paying down high-interest debt")
+        
+        if expense_ratio > 0.70:
+            st.markdown("- 💡 **Review expenses**: Look for areas where you can reduce spending")
+            
+            # Identify highest expense categories
+            expenses = {
+                "Rent/Mortgage": rent,
+                "Groceries": groceries,
+                "Transport": transport,
+                "Eating Out": eating_out,
+                "Entertainment": entertainment,
+                "Utilities": utilities,
+                "Healthcare": healthcare,
+                "Education": education,
+                "Miscellaneous": miscellaneous
+            }
+            
+            top_expenses = sorted(expenses.items(), key=lambda x: x[1], reverse=True)[:3]
+            st.markdown("- 💡 **Highest expense categories**:")
+            for category, amount in top_expenses:
+                percentage = amount / income * 100
+                st.markdown(f"  - {category}: ${amount:.2f} ({percentage:.1f}% of income)")
 
 # Information section at the bottom
 st.markdown("""
 ---
-### About Financial Stability Classification
+### About Dynamic Financial Classification
 
-This app uses a simplified model to classify financial stability based on key financial ratios:
+This app uses machine learning techniques to classify financial stability based on key financial ratios:
 
 1. **Savings Rate** = Monthly Savings ÷ Monthly Income
 2. **Debt Rate** = Monthly Loan Repayments ÷ Monthly Income
 3. **Expense to Income Ratio** = Total Monthly Expenses ÷ Monthly Income
 4. **Liquid Term** = Monthly Savings ÷ (Monthly Income - Monthly Savings)
 
-For a more accurate assessment, consult with a financial advisor.
+The classification algorithm evaluates your financial metrics against established patterns to determine your stability category.
+
+For a more personalized financial strategy, consider consulting with a financial advisor.
 """)
