@@ -24,20 +24,20 @@ with st.form("financial_form"):
     col1, col2 = st.columns(2)
     
     with col1:
-        income = st.number_input("Monthly Income ($)", min_value=0.0, value=3000.0, step=100.0)
-        desired_savings = st.number_input("Monthly Savings Target ($)", min_value=0.0, value=500.0, step=50.0)
-        loan_repayment = st.number_input("Monthly Loan Repayments ($)", min_value=0.0, value=300.0, step=50.0)
-        rent = st.number_input("Monthly Rent/Mortgage ($)", min_value=0.0, value=1000.0, step=50.0)
-        groceries = st.number_input("Monthly Groceries ($)", min_value=0.0, value=400.0, step=50.0)
+        income = st.number_input("Monthly Income (₹)", min_value=0.0, value=0.0, step=1000.0)
+        desired_savings = st.number_input("Monthly Savings Target (₹)", min_value=0.0, value=0.0, step=500.0)
+        loan_repayment = st.number_input("Monthly Loan Repayments (₹)", min_value=0.0, value=0.0, step=500.0)
+        rent = st.number_input("Monthly Rent/Mortgage (₹)", min_value=0.0, value=0.0, step=500.0)
+        groceries = st.number_input("Monthly Groceries (₹)", min_value=0.0, value=0.0, step=500.0)
     
     with col2:
-        transport = st.number_input("Monthly Transport ($)", min_value=0.0, value=200.0, step=50.0)
-        eating_out = st.number_input("Monthly Eating Out ($)", min_value=0.0, value=150.0, step=50.0)
-        entertainment = st.number_input("Monthly Entertainment ($)", min_value=0.0, value=100.0, step=50.0)
-        utilities = st.number_input("Monthly Utilities ($)", min_value=0.0, value=200.0, step=50.0)
-        healthcare = st.number_input("Monthly Healthcare ($)", min_value=0.0, value=100.0, step=50.0)
-        education = st.number_input("Monthly Education ($)", min_value=0.0, value=50.0, step=50.0)
-        miscellaneous = st.number_input("Monthly Miscellaneous ($)", min_value=0.0, value=100.0, step=50.0)
+        transport = st.number_input("Monthly Transport (₹)", min_value=0.0, value=0.0, step=500.0)
+        eating_out = st.number_input("Monthly Eating Out (₹)", min_value=0.0, value=0.0, step=500.0)
+        entertainment = st.number_input("Monthly Entertainment (₹)", min_value=0.0, value=0.0, step=500.0)
+        utilities = st.number_input("Monthly Utilities (₹)", min_value=0.0, value=0.0, step=500.0)
+        healthcare = st.number_input("Monthly Healthcare (₹)", min_value=0.0, value=0.0, step=500.0)
+        education = st.number_input("Monthly Education (₹)", min_value=0.0, value=0.0, step=500.0)
+        miscellaneous = st.number_input("Monthly Miscellaneous (₹)", min_value=0.0, value=0.0, step=500.0)
     
     submit_button = st.form_submit_button("Analyze My Financial Stability")
 
@@ -60,13 +60,13 @@ if submit_button:
     })
     
     # Feature Engineering
-    user_data["Savings_Rate"] = user_data["Desired_Savings"] / user_data["Income"]
-    user_data["Debt_Rate"] = user_data["Loan_Repayment"] / user_data["Income"]
+    user_data["Savings_Rate"] = user_data["Desired_Savings"] / user_data["Income"] if user_data["Income"].values[0] > 0 else 0
+    user_data["Debt_Rate"] = user_data["Loan_Repayment"] / user_data["Income"] if user_data["Income"].values[0] > 0 else 0
     user_data["Expense_to_Income"] = (user_data["Rent"] + user_data["Groceries"] + 
                                     user_data["Transport"] + user_data["Eating_Out"] +
                                     user_data["Entertainment"] + user_data["Utilities"] + 
                                     user_data["Healthcare"] + user_data["Education"] + 
-                                    user_data["Miscellaneous"]) / user_data["Income"]
+                                    user_data["Miscellaneous"]) / user_data["Income"] if user_data["Income"].values[0] > 0 else 0
     
     # Handle division by zero for Liquid_Term
     if income - desired_savings <= 0:
@@ -231,8 +231,11 @@ if submit_button:
             top_expenses = sorted(expenses.items(), key=lambda x: x[1], reverse=True)[:3]
             st.markdown("- 💡 **Highest expense categories**:")
             for category, amount in top_expenses:
-                percentage = amount / income * 100
-                st.markdown(f"  - {category}: ${amount:.2f} ({percentage:.1f}% of income)")
+                if income > 0:
+                    percentage = amount / income * 100
+                    st.markdown(f"  - {category}: ₹{amount:.2f} ({percentage:.1f}% of income)")
+                else:
+                    st.markdown(f"  - {category}: ₹{amount:.2f}")
 
 # Information section at the bottom
 st.markdown("""
