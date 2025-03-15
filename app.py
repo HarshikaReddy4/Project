@@ -1,262 +1,238 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import seaborn as sns
-import matplotlib.pyplot as plt
 from sklearn.cluster import DBSCAN
 from sklearn.preprocessing import RobustScaler
-from sklearn.decomposition import PCA
-from sklearn.metrics import silhouette_score, calinski_harabasz_score, davies_bouldin_score
-import plotly.express as px
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
 
-
+# Set page config
 st.set_page_config(
-    page_title="Financial Stability Clustering",
+    page_title="Financial Stability Classifier",
     page_icon="💰",
     layout="wide"
 )
 
-
-st.title("💰 Financial Stability Clustering Analysis")
+# Add title and description
+st.title("💰 Financial Stability Classifier")
 st.markdown("""
-This application analyzes financial patterns using DBSCAN clustering to identify different financial stability profiles.
-Upload your CSV file containing financial data to begin the analysis.
+This app classifies your financial stability based on your income, expenses, savings, and debt information.
+Enter your financial details below to receive your stability assessment.
 """)
 
-
-uploaded_file = st.file_uploader("Upload your financial data CSV", type=["csv"])
-
-st.sidebar.header("Clustering Parameters")
-eps = st.sidebar.slider("DBSCAN Epsilon (Neighborhood Size)", 0.1, 2.0, 0.5, 0.1)
-min_samples = st.sidebar.slider("DBSCAN Min Samples", 3, 15, 5, 1)
-use_pca = st.sidebar.checkbox("Use PCA for Dimensionality Reduction", True)
-pca_components = st.sidebar.slider("PCA Components", 2, 4, 2, 1) if use_pca else None
-
-def run_clustering_analysis(df):
-    
-    with st.expander("Feature Engineering Details", expanded=False):
-        st.markdown("""
-        The following features are calculated:
-        - **Savings Rate**: Desired savings divided by income
-        - **Debt Rate**: Loan repayment divided by income
-        - **Expense to Income Ratio**: Total expenses divided by income
-        - **Liquid Term**: Desired savings divided by (income minus desired savings)
-        """)
-    
-    df["Savings_Rate"] = df["Desired_Savings"] / df["Income"]
-    df["Debt_Rate"] = df["Loan_Repayment"] / df["Income"]
-    df["Expense_to_Income"] = (df["Rent"] + df["Groceries"] + df["Transport"] + df["Eating_Out"] +
-                           df["Entertainment"] + df["Utilities"] + df["Healthcare"] + df["Education"] + df["Miscellaneous"]) / df["Income"]
-    df["Liquid_Term"] = df["Desired_Savings"] / (df["Income"] - df["Desired_Savings"])
-    
- 
-    features_for_clustering = df[["Savings_Rate", "Debt_Rate", "Expense_to_Income", "Liquid_Term"]].fillna(0)
-   
-    st.subheader("Feature Statistics")
-    st.dataframe(features_for_clustering.describe())
-    
-
-    scaler = RobustScaler()
-    features_scaled = scaler.fit_transform(features_for_clustering)
-    
-    # Dimensionality Reduction if selected
-    if use_pca:
-        pca = PCA(n_components=pca_components)
-        features_scaled = pca.fit_transform(features_scaled)
-        
-        # Display PCA explained variance
-        explained_variance = pca.explained_variance_ratio_
-        st.subheader("PCA Explained Variance")
-        fig = px.bar(
-            x=[f"Component {i+1}" for i in range(pca_components)],
-            y=explained_variance,
-            labels={"x": "Principal Component", "y": "Explained Variance Ratio"}
-        )
-        st.plotly_chart(fig)
-    
-    # DBSCAN Clustering
-    with st.spinner("Running DBSCAN clustering..."):
-        dbscan = DBSCAN(eps=eps, min_samples=min_samples)
-        labels = dbscan.fit_predict(features_scaled)
-        
-        # Check if meaningful clusters were found
-        if len(set(labels)) < 2 or -1 in labels and np.sum(labels == -1) / len(labels) > 0.5:
-            st.warning("⚠️ The current parameters result in poor clustering. Try adjusting epsilon and min_samples.")
-            return
-        
-        df["Stability_Cluster"] = labels
-    
-    # Display clustering metrics
-    n_clusters = len(set(labels)) - (1 if -1 in labels else 0)
-    noise_points = np.sum(labels == -1)
-    
-    st.subheader("Clustering Results")
-    col1, col2, col3, col4 = st.columns(4)
+# Define the form for user input
+st.subheader("Enter Your Financial Information")
+with st.form("financial_form"):
+    col1, col2 = st.columns(2)
     
     with col1:
-        st.metric("Number of Clusters", n_clusters)
+        income = st.number_input("Monthly Income ($)", min_value=0.0, value=3000.0, step=100.0)
+        desired_savings = st.number_input("Monthly Savings Target ($)", min_value=0.0, value=500.0, step=50.0)
+        loan_repayment = st.number_input("Monthly Loan Repayments ($)", min_value=0.0, value=300.0, step=50.0)
+        rent = st.number_input("Monthly Rent/Mortgage ($)", min_value=0.0, value=1000.0, step=50.0)
+        groceries = st.number_input("Monthly Groceries ($)", min_value=0.0, value=400.0, step=50.0)
+    
     with col2:
-        st.metric("Noise Points", noise_points)
-    with col3:
-        if n_clusters > 1:
-            silhouette = silhouette_score(features_scaled, labels)
-            st.metric("Silhouette Score", f"{silhouette:.4f}")
-    with col4:
-        if n_clusters > 1:
-            davies_bouldin = davies_bouldin_score(features_scaled, labels)
-            st.metric("Davies-Bouldin Score", f"{davies_bouldin:.4f}")
+        transport = st.number_input("Monthly Transport ($)", min_value=0.0, value=200.0, step=50.0)
+        eating_out = st.number_input("Monthly Eating Out ($)", min_value=0.0, value=150.0, step=50.0)
+        entertainment = st.number_input("Monthly Entertainment ($)", min_value=0.0, value=100.0, step=50.0)
+        utilities = st.number_input("Monthly Utilities ($)", min_value=0.0, value=200.0, step=50.0)
+        healthcare = st.number_input("Monthly Healthcare ($)", min_value=0.0, value=100.0, step=50.0)
+        education = st.number_input("Monthly Education ($)", min_value=0.0, value=50.0, step=50.0)
+        miscellaneous = st.number_input("Monthly Miscellaneous ($)", min_value=0.0, value=100.0, step=50.0)
     
-    # Cluster distribution
-    st.subheader("Cluster Distribution")
-    cluster_counts = df["Stability_Cluster"].value_counts().reset_index()
-    cluster_counts.columns = ["Cluster", "Count"]
-    
-    fig = px.pie(
-        cluster_counts, 
-        values="Count", 
-        names="Cluster",
-        title="Distribution of Clusters",
-        color="Cluster",
-        color_discrete_sequence=px.colors.qualitative.Bold
-    )
-    st.plotly_chart(fig)
-    
-    # Cluster profiles
-    st.subheader("Cluster Profiles")
-    
-    cluster_profiles = df.groupby("Stability_Cluster")[["Savings_Rate", "Debt_Rate", "Expense_to_Income", "Liquid_Term"]].mean().reset_index()
-    
-    fig = px.parallel_coordinates(
-        cluster_profiles,
-        color="Stability_Cluster",
-        labels={"Stability_Cluster": "Cluster", "Savings_Rate": "Savings Rate", 
-                "Debt_Rate": "Debt Rate", "Expense_to_Income": "Expense to Income", 
-                "Liquid_Term": "Liquid Term"},
-        color_continuous_scale=px.colors.sequential.Viridis,
-        title="Parallel Coordinates Plot of Cluster Profiles"
-    )
-    st.plotly_chart(fig)
-    
-    # Interactive scatter plot matrix
-    st.subheader("Interactive Feature Relationships by Cluster")
-    
-    scatter_df = df[["Savings_Rate", "Debt_Rate", "Expense_to_Income", "Liquid_Term", "Stability_Cluster"]].copy()
-    scatter_df["Stability_Cluster"] = scatter_df["Stability_Cluster"].astype(str)
-    
-    fig = px.scatter_matrix(
-        scatter_df,
-        dimensions=["Savings_Rate", "Debt_Rate", "Expense_to_Income", "Liquid_Term"],
-        color="Stability_Cluster",
-        opacity=0.7,
-        title="Scatter Plot Matrix of Financial Features"
-    )
-    st.plotly_chart(fig)
-    
-    # 3D visualization if PCA was used with 3 components
-    if use_pca and pca_components >= 3:
-        st.subheader("3D Cluster Visualization")
-        
-        pca_df = pd.DataFrame(
-            features_scaled, 
-            columns=[f"PC{i+1}" for i in range(pca_components)]
-        )
-        pca_df["Cluster"] = labels
-        
-        fig = px.scatter_3d(
-            pca_df, x="PC1", y="PC2", z="PC3",
-            color=pca_df["Cluster"].astype(str),
-            opacity=0.7,
-            title="3D Visualization of Clusters (PCA)",
-            labels={"color": "Cluster"}
-        )
-        st.plotly_chart(fig)
-    
-    # Table with detailed cluster information
-    st.subheader("Detailed Cluster Information")
-    cluster_details = df.groupby("Stability_Cluster").agg({
-        "Savings_Rate": ["mean", "median", "std"],
-        "Debt_Rate": ["mean", "median", "std"],
-        "Expense_to_Income": ["mean", "median", "std"],
-        "Liquid_Term": ["mean", "median", "std"],
-        "Income": ["mean", "count"]
-    }).reset_index()
-    
-    cluster_details.columns = [f"{col[0]}_{col[1]}" if col[1] else col[0] for col in cluster_details.columns]
-    cluster_details = cluster_details.rename(columns={"Income_count": "Count"})
-    
-    st.dataframe(cluster_details)
-    
-    # Download results button
-    st.download_button(
-        label="Download Results as CSV",
-        data=df.to_csv(index=False).encode("utf-8"),
-        file_name="financial_stability_results.csv",
-        mime="text/csv"
-    )
-    
-    return df
+    submit_button = st.form_submit_button("Analyze My Financial Stability")
 
-# Run analysis if file is uploaded
-if uploaded_file is not None:
-    try:
-        df = pd.read_csv(uploaded_file)
-        
-        # Check if required columns exist
-        required_columns = ["Income", "Desired_Savings", "Loan_Repayment", "Rent", "Groceries", 
-                           "Transport", "Eating_Out", "Entertainment", "Utilities", 
-                           "Healthcare", "Education", "Miscellaneous"]
-        
-        missing_columns = [col for col in required_columns if col not in df.columns]
-        
-        if missing_columns:
-            st.error(f"Error: Missing required columns: {', '.join(missing_columns)}")
+# Process when form is submitted
+if submit_button:
+    # Create a dataframe with the user input
+    user_data = pd.DataFrame({
+        "Income": [income],
+        "Desired_Savings": [desired_savings],
+        "Loan_Repayment": [loan_repayment],
+        "Rent": [rent],
+        "Groceries": [groceries],
+        "Transport": [transport],
+        "Eating_Out": [eating_out],
+        "Entertainment": [entertainment],
+        "Utilities": [utilities],
+        "Healthcare": [healthcare],
+        "Education": [education],
+        "Miscellaneous": [miscellaneous]
+    })
+    
+    # Feature Engineering
+    user_data["Savings_Rate"] = user_data["Desired_Savings"] / user_data["Income"]
+    user_data["Debt_Rate"] = user_data["Loan_Repayment"] / user_data["Income"]
+    user_data["Expense_to_Income"] = (user_data["Rent"] + user_data["Groceries"] + 
+                                    user_data["Transport"] + user_data["Eating_Out"] +
+                                    user_data["Entertainment"] + user_data["Utilities"] + 
+                                    user_data["Healthcare"] + user_data["Education"] + 
+                                    user_data["Miscellaneous"]) / user_data["Income"]
+    
+    # Handle division by zero for Liquid_Term
+    if income - desired_savings <= 0:
+        user_data["Liquid_Term"] = 100  # High value to indicate infinite term
+    else:
+        user_data["Liquid_Term"] = user_data["Desired_Savings"] / (user_data["Income"] - user_data["Desired_Savings"])
+    
+    # Display calculated metrics
+    st.subheader("Your Financial Metrics")
+    metrics_col1, metrics_col2, metrics_col3, metrics_col4 = st.columns(4)
+    
+    with metrics_col1:
+        st.metric("Savings Rate", f"{user_data['Savings_Rate'].values[0]:.1%}")
+    with metrics_col2:
+        st.metric("Debt Rate", f"{user_data['Debt_Rate'].values[0]:.1%}")
+    with metrics_col3:
+        st.metric("Expense to Income", f"{user_data['Expense_to_Income'].values[0]:.1%}")
+    with metrics_col4:
+        liquid_term = user_data['Liquid_Term'].values[0]
+        if liquid_term >= 100:
+            st.metric("Liquid Term", "∞")
         else:
-            # Show raw data preview
-            with st.expander("Raw Data Preview"):
-                st.dataframe(df.head())
-            
-            # Run the analysis
-            results_df = run_clustering_analysis(df)
-            
-    except Exception as e:
-        st.error(f"Error: {str(e)}")
-else:
-    st.info("Please upload a CSV file to begin the analysis.")
+            st.metric("Liquid Term", f"{liquid_term:.2f}")
     
-    # Sample data description
-    st.markdown("""
-    ### Expected Data Format
+    # Define classification logic based on financial metrics
+    # This is a simplified version - in a real application, you'd use your trained DBSCAN model
     
-    Your CSV should contain the following columns:
-    - `Income`: Monthly income
-    - `Desired_Savings`: Target monthly savings
-    - `Loan_Repayment`: Monthly loan payments
-    - Expense categories:
-        - `Rent`
-        - `Groceries`
-        - `Transport`
-        - `Eating_Out`
-        - `Entertainment`
-        - `Utilities`
-        - `Healthcare`
-        - `Education`
-        - `Miscellaneous`
-    """)
+    # Method 1: Simple rules-based classification
+    savings_rate = user_data['Savings_Rate'].values[0]
+    debt_rate = user_data['Debt_Rate'].values[0]
+    expense_ratio = user_data['Expense_to_Income'].values[0]
+    
+    # Calculate a simple score
+    score = 0
+    
+    # Savings Rate scoring
+    if savings_rate >= 0.20:
+        score += 3  # High savings rate
+    elif savings_rate >= 0.10:
+        score += 2  # Moderate savings rate
+    elif savings_rate > 0:
+        score += 1  # Low savings rate
+    
+    # Debt Rate scoring (lower is better)
+    if debt_rate <= 0.15:
+        score += 3  # Low debt rate
+    elif debt_rate <= 0.30:
+        score += 2  # Moderate debt rate
+    elif debt_rate <= 0.40:
+        score += 1  # High debt rate
+    
+    # Expense to Income scoring (lower is better)
+    if expense_ratio <= 0.50:
+        score += 3  # Low expense ratio
+    elif expense_ratio <= 0.70:
+        score += 2  # Moderate expense ratio
+    elif expense_ratio <= 0.85:
+        score += 1  # High expense ratio
+    
+    # Determine stability category based on score
+    if score >= 7:
+        stability = "High Stability"
+        color = "#28a745"  # Green
+        description = "You have excellent financial stability with a good balance between savings, expenses, and debt."
+    elif score >= 4:
+        stability = "Moderate Stability"
+        color = "#ffc107"  # Yellow
+        description = "You have moderate financial stability. There's room for improvement in certain areas."
+    else:
+        stability = "Low Stability"
+        color = "#dc3545"  # Red
+        description = "Your financial stability is at risk. Consider adjusting your savings, expenses, or debt management."
+    
+    # Display results
+    st.header("Your Financial Stability Assessment")
+    
+    # Create a centered, colored box for the result
+    st.markdown(f"""
+    <div style="background-color: {color}; padding: 20px; border-radius: 10px; text-align: center; margin: 20px 0;">
+        <h2 style="color: white; margin: 0;">{stability}</h2>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.subheader("Assessment Details")
+    st.write(description)
+    
+    # Detailed breakdown
+    st.subheader("Breakdown of Your Financial Health")
+    
+    breakdown_col1, breakdown_col2, breakdown_col3 = st.columns(3)
+    
+    with breakdown_col1:
+        st.markdown("### Savings")
+        if savings_rate >= 0.20:
+            st.markdown("✅ **Excellent**: Your savings rate is above 20%")
+        elif savings_rate >= 0.10:
+            st.markdown("✓ **Good**: Your savings rate is between 10-20%")
+        elif savings_rate > 0:
+            st.markdown("⚠️ **Needs Improvement**: Your savings rate is below 10%")
+        else:
+            st.markdown("❌ **Critical**: You are not saving any money")
+    
+    with breakdown_col2:
+        st.markdown("### Debt")
+        if debt_rate <= 0.15:
+            st.markdown("✅ **Excellent**: Your debt burden is low")
+        elif debt_rate <= 0.30:
+            st.markdown("✓ **Good**: Your debt is at a manageable level")
+        elif debt_rate <= 0.40:
+            st.markdown("⚠️ **Caution**: Your debt burden is high")
+        else:
+            st.markdown("❌ **Critical**: Your debt burden is very high")
+    
+    with breakdown_col3:
+        st.markdown("### Expenses")
+        if expense_ratio <= 0.50:
+            st.markdown("✅ **Excellent**: Your expenses are well controlled")
+        elif expense_ratio <= 0.70:
+            st.markdown("✓ **Good**: Your expenses are reasonable")
+        elif expense_ratio <= 0.85:
+            st.markdown("⚠️ **Caution**: Your expenses are high relative to income")
+        else:
+            st.markdown("❌ **Critical**: Your expenses are too high")
+    
+    # Recommendations
+    st.subheader("Recommendations")
+    
+    if savings_rate < 0.10:
+        st.markdown("- 💡 **Increase savings**: Try to save at least 10% of your income")
+    
+    if debt_rate > 0.30:
+        st.markdown("- 💡 **Reduce debt**: Focus on paying down high-interest debt")
+    
+    if expense_ratio > 0.70:
+        st.markdown("- 💡 **Review expenses**: Look for areas where you can reduce spending")
+        
+        # Identify highest expense categories
+        expenses = {
+            "Rent/Mortgage": rent,
+            "Groceries": groceries,
+            "Transport": transport,
+            "Eating Out": eating_out,
+            "Entertainment": entertainment,
+            "Utilities": utilities,
+            "Healthcare": healthcare,
+            "Education": education,
+            "Miscellaneous": miscellaneous
+        }
+        
+        top_expenses = sorted(expenses.items(), key=lambda x: x[1], reverse=True)[:3]
+        st.markdown("- 💡 **Highest expense categories**:")
+        for category, amount in top_expenses:
+            percentage = amount / income * 100
+            st.markdown(f"  - {category}: ${amount:.2f} ({percentage:.1f}% of income)")
 
-# Footer
+# Information section at the bottom
 st.markdown("""
 ---
-### About Financial Stability Clustering
+### About Financial Stability Classification
 
-This app uses DBSCAN (Density-Based Spatial Clustering of Applications with Noise) to identify 
-patterns in financial behaviors. The algorithm groups similar financial profiles together, 
-helping to identify different financial stability segments.
+This app uses a simplified model to classify financial stability based on key financial ratios:
 
-**Key Metrics:**
-- **Savings Rate**: Indicates what portion of income is saved
-- **Debt Rate**: Shows debt burden relative to income
-- **Expense to Income Ratio**: Measures overall spending relative to income
-- **Liquid Term**: Represents financial resilience (how long savings would last)
+1. **Savings Rate** = Monthly Savings ÷ Monthly Income
+2. **Debt Rate** = Monthly Loan Repayments ÷ Monthly Income
+3. **Expense to Income Ratio** = Total Monthly Expenses ÷ Monthly Income
+4. **Liquid Term** = Monthly Savings ÷ (Monthly Income - Monthly Savings)
+
+For a more accurate assessment, consult with a financial advisor.
 """)
